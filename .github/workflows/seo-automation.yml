@@ -1,1 +1,60 @@
+name: YouTube Auto-SEO System
 
+on:
+  schedule:
+    # Ab DAILY chalega — taake upload calendar (Shorts/Long video schedule)
+    # roz check ho sake. SEO-refresh (existing videos update) internally
+    # har 3 din pe hi hoti hai, script khud manage karti hai.
+    - cron: '0 15 * * *'
+  workflow_dispatch: {}   # Manual "Run" button bhi milega testing ke liye
+
+permissions:
+  contents: write   # Zaroori hai taake tracking_sheet.xlsx ko repo mein commit kar sake
+
+jobs:
+  run-seo-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repo checkout karo
+        uses: actions/checkout@v4
+
+      - name: Python setup karo
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Dependencies install karo
+        run: pip install -r scripts/requirements.txt
+
+      - name: SEO automation script chalao
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          YOUTUBE_CHANNEL_ID: ${{ secrets.YOUTUBE_CHANNEL_ID }}
+          YOUTUBE_OAUTH_CLIENT_ID: ${{ secrets.YOUTUBE_OAUTH_CLIENT_ID }}
+          YOUTUBE_OAUTH_CLIENT_SECRET: ${{ secrets.YOUTUBE_OAUTH_CLIENT_SECRET }}
+          YOUTUBE_OAUTH_REFRESH_TOKEN: ${{ secrets.YOUTUBE_OAUTH_REFRESH_TOKEN }}
+          WHATSAPP_PHONE: ${{ secrets.WHATSAPP_PHONE }}
+          WHATSAPP_APIKEY: ${{ secrets.WHATSAPP_APIKEY }}
+          NICHE_KEYWORDS: "YOUR NICHE KEYWORDS HERE, e.g. cooking, tech reviews"
+          TARGET_AUDIENCE_GEOS: "US,AU,CA,GB,CH,NO"
+          TARGET_AUDIENCE_LABEL: "US, Australia, Canada, UK, Switzerland, and Norway (high-CPM markets)"
+          PUBLISH_HOUR_UTC: "21"   # Video is upload turant hoti hai, PUBLIC isi UTC hour pe hoti hai
+          ENABLE_CAPTION_IMPROVEMENT: "true"
+          QUOTA_SAFETY_LIMIT: "9000"   # YouTube API daily limit 10,000 hai, 9000 pe safety margin rakhi hai
+          ENABLE_AUTO_COMMENT: "true"   # "false" karein agar auto-comment nahi chahiye
+          DRIVE_SHORTS_TOUPLOAD_FOLDER_ID: ${{ secrets.DRIVE_SHORTS_TOUPLOAD_FOLDER_ID }}
+          DRIVE_SHORTS_UPLOADED_FOLDER_ID: ${{ secrets.DRIVE_SHORTS_UPLOADED_FOLDER_ID }}
+          DRIVE_LONG_TOUPLOAD_FOLDER_ID: ${{ secrets.DRIVE_LONG_TOUPLOAD_FOLDER_ID }}
+          DRIVE_LONG_UPLOADED_FOLDER_ID: ${{ secrets.DRIVE_LONG_UPLOADED_FOLDER_ID }}
+          SHORTS_UPLOAD_DAYS: "0,1,2,3,4"   # Monday=0 ... Sunday=6. Default: Mon-Fri = Shorts
+          LONG_UPLOAD_DAYS: "5"              # Default: Saturday = Full video
+        run: python scripts/seo_automation.py
+
+      - name: Tracking sheet aur keyword data ko repo mein save karo
+        run: |
+          git config user.name "seo-automation-bot"
+          git config user.email "actions@github.com"
+          git add tracking_sheet.xlsx winning_keywords.json || true
+          git diff --cached --quiet || git commit -m "Data update: $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push || true
