@@ -36,7 +36,7 @@ jobs:
           YOUTUBE_OAUTH_REFRESH_TOKEN: ${{ secrets.YOUTUBE_OAUTH_REFRESH_TOKEN }}
           WHATSAPP_PHONE: ${{ secrets.WHATSAPP_PHONE }}
           WHATSAPP_APIKEY: ${{ secrets.WHATSAPP_APIKEY }}
-          NICHE_KEYWORDS: "YOUR NICHE KEYWORDS HERE, e.g. cooking, tech reviews"
+          NICHE_KEYWORDS: "YOUR NICHE KEYWORDS HERE, e.g. dark stories, scary reddit stories, horror stories"
           TARGET_AUDIENCE_GEOS: "US,AU,CA,GB,CH,NO"
           TARGET_AUDIENCE_LABEL: "US, Australia, Canada, UK, Switzerland, and Norway (high-CPM markets)"
           PUBLISH_HOUR_UTC: "21"   # Video is upload turant hoti hai, PUBLIC isi UTC hour pe hoti hai
