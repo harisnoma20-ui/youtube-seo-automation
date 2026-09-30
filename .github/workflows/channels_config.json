@@ -1,0 +1,18 @@
+{
+  "_readme": "Har channel ke liye ek object niche daalein. 'secret_prefix' khali rakhein pehle/mojooda channel ke liye. Naya channel add karne ke liye niche object copy karein, secret_prefix 'CH2_' rakhein, aur GitHub Secrets mein CH2_ prefix wale naye secrets bhi banayein.",
+
+  "channels": [
+    {
+      "name": "channel1",
+      "secret_prefix": "",
+      "niche_keywords": "dark stories, scary reddit stories, horror stories",
+      "target_audience_geos": "US,AU,CA,GB,CH,NO",
+      "target_audience_label": "US, Australia, Canada, UK, Switzerland, and Norway (high-CPM markets)",
+      "publish_hour_utc": 21,
+      "shorts_upload_days": "0,1,2,3,4",
+      "long_upload_days": "5",
+      "enable_caption_improvement": true,
+      "enable_auto_comment": true
+    }
+  ]
+}
