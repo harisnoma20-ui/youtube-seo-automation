@@ -37,6 +37,8 @@ def _call_groq(prompt, temperature=0.7):
         json={"model": "openai/gpt-oss-20b", "messages": [{"role": "user", "content": prompt}], "temperature": temperature, "reasoning_effort": "low", "max_tokens": 1000},
         timeout=30,
     )
+    if response.status_code >= 400:
+        print(f"GROQ DEBUG: status={response.status_code} body={response.text[:500]}")
     response.raise_for_status()
     return response.json()["choices"][0]["message"]["content"]
 
