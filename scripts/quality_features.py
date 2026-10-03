@@ -1,10 +1,10 @@
 """
 Quality Features Module — Auto-Thumbnail Fix, Caption Improvement, Quota Safety
 -------------------------------------------------------------------------------
-1. AUTO-THUMBNAIL FIX: Jab diagnosis 'THUMBNAIL' issue baar-baar flag kare, ye
-   module khud ek naya thumbnail (title-text overlay ke sath, styled background)
-   generate karke YouTube pe set kar deta hai — 'detect + fix' dono khud hote hain.
-
+1. THUMBNAIL HELPERS: agar future mein enable karna ho, module mein text-overlay
+   aur video-frame-extraction dono ka code maujood hai. Filhaal seo_automation.py
+   isay CALL nahi karta (sirf detect-and-notify hota hai) — thumbnail badalna
+   creator ke apne haath mein rakha gaya hai.
 2. CAPTION IMPROVEMENT: YouTube khud video upload hone ke kuch der baad
    auto-captions (ASR) generate karta hai. Ye module un auto-captions ko
    nikaal kar AI se saaf/behtar (punctuation, clarity) karke wapas ek
@@ -12,7 +12,6 @@ Quality Features Module — Auto-Thumbnail Fix, Caption Improvement, Quota Safet
    NOTE: Ye 'text improvement' hai, scratch se generation nahi — kyunke
    humein video ka actual transcript nahi milta, sirf YouTube ke apne ASR
    captions milte hain jo hum behtar karte hain.
-
 3. QUOTA SAFETY: YouTube Data API ki daily limit (10,000 units) hoti hai.
    Ye module andaza rakhta hai ke is run mein kitni units use ho chuki hain,
    aur agar limit ke paas pahunch jayein to non-critical operations
@@ -21,13 +20,13 @@ Quality Features Module — Auto-Thumbnail Fix, Caption Improvement, Quota Safet
 """
 
 import os
-import re
-import io
 import subprocess
+import io
 import requests
 from PIL import Image, ImageDraw, ImageFont
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+
 THUMBNAIL_WIDTH = 1280
 THUMBNAIL_HEIGHT = 720
 
@@ -66,7 +65,7 @@ class QuotaTracker:
         return f"Quota estimate: {self.used}/{self.safety_limit} units is run mein use hui."
 
 
-# ========== AUTO-THUMBNAIL FIX ==========
+# ========== THUMBNAIL HELPERS (opt-in, currently not auto-called) ==========
 def _get_font(size):
     """System font dhoondhna — agar na mile to PIL ka default font use hoga."""
     font_paths = [
@@ -231,7 +230,7 @@ text return karo, kuch aur nahi."""
     response = requests.post(
         "https://api.groq.com/openai/v1/chat/completions",
         headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
-        json={"model": "llama-3.3-70b-versatile", "messages": [{"role": "user", "content": prompt}], "temperature": 0.3},
+        json={"model": "openai/gpt-oss-20b", "messages": [{"role": "user", "content": prompt}], "temperature": 0.3, "reasoning_effort": "low", "max_tokens": 1500},
         timeout=30,
     )
     response.raise_for_status()
