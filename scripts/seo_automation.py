@@ -174,12 +174,16 @@ Title 60 characters se kam, unique (kisi doosri video se match na kare), descrip
         "https://api.groq.com/openai/v1/chat/completions",
         headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
         json={
-            "model": "llama-3.3-70b-versatile",
+            "model": "openai/gpt-oss-20b",
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.8,
+            "reasoning_effort": "low",
+            "max_tokens": 1500,
         },
         timeout=30,
     )
+    if response.status_code >= 400:
+        print(f"GROQ DEBUG: status={response.status_code} body={response.text[:500]}")
     response.raise_for_status()
     raw_text = response.json()["choices"][0]["message"]["content"]
     clean_text = raw_text.replace("```json", "").replace("```", "").strip()
