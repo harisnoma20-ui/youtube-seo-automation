@@ -1,16 +1,15 @@
 {
-  "_readme": "Har channel ke liye ek object niche daalein. 'secret_prefix' khali rakhein pehle/mojooda channel ke liye (jo secrets aap already GitHub mein bina prefix ke daal chuke hain, wo isi channel ke liye use hongi). Naya channel add karne ke liye niche object copy karein, secret_prefix 'CH2_' (ya CH3_ waghera) rakhein, aur GitHub Secrets mein CH2_ prefix wale naye secrets bhi banayein (workflow file mein CH2 wala commented block uncomment karein).",
-
+  "_readme": "Har channel ke liye ek object niche daalein.",
   "channels": [
     {
-      "name": "channel1",
+      "name": "hiddenhistory",
       "secret_prefix": "",
-      "niche_keywords": "YOUR NICHE KEYWORDS HERE, e.g. dark stories, scary reddit stories",
+      "niche_keywords": "hidden history, untold history, forgotten history, historical mysteries, dark history facts",
       "target_audience_geos": "US,AU,CA,GB,CH,NO",
       "target_audience_label": "US, Australia, Canada, UK, Switzerland, and Norway (high-CPM markets)",
       "publish_hour_utc": 21,
       "shorts_upload_days": "0,1,2,3,4",
-      "long_upload_days": "5","6",
+      "long_upload_days": "5,6",
       "enable_caption_improvement": true,
       "enable_auto_comment": true
     }
