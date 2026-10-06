@@ -119,6 +119,7 @@ def get_oauth_credentials(ctx):
         token_uri="https://oauth2.googleapis.com/token",
         scopes=[
             "https://www.googleapis.com/auth/youtube",
+            "https://www.googleapis.com/auth/youtube.force-ssl",
             "https://www.googleapis.com/auth/yt-analytics.readonly",
             "https://www.googleapis.com/auth/drive",
         ],
