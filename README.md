@@ -20,3 +20,26 @@ karta hai.
 3. `.github/workflows/seo-automation.yml` mein CH2 wala commented block uncomment karein
 
 Setup ke baaki steps PDF guide follow karein.
+
+## Shorts folder rule
+
+`DRIVE_SHORTS_TOUPLOAD_FOLDER_ID` ka folder upload intent batata hai, lekin
+YouTube classification force nahi karta. Automation upload se pehle file ko
+check karti hai: duration 180 seconds ya kam aur aspect ratio square/vertical
+hona zaroori hai. Invalid file upload nahi hoti aur `Uploaded` folder mein move
+nahi hoti. 10-minute video ko Short banane ke liye pehle usay 3-minute ya chhote
+vertical clips mein export karna hoga.
+
+## Premium-country targeting
+
+`target_audience_geos` Google Trends research aur English metadata context ke
+liye use hota hai. Organic YouTube recommendations ko country list se force
+nahi kiya ja sakta. Medieval channel US, GB, CA aur AU research context, English
+metadata, Education category aur 21:00 UTC publishing slot use karta hai.
+
+## Safe defaults
+
+`enable_metadata_refresh` aur `enable_auto_comment` filhaal `false` hain.
+Nayi upload ko SEO metadata milti rahegi, lekin purani published videos ke
+titles/descriptions/tags automatically rewrite nahi honge aur creator comment
+auto-post nahi hoga.
