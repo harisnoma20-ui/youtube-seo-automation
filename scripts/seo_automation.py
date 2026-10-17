@@ -111,7 +111,16 @@ def build_channel_context(channel_cfg):
             channel_cfg.get("enable_caption_improvement", True)
         ),
         "enable_auto_comment": bool(
-            channel_cfg.get("enable_auto_comment", True)
+            channel_cfg.get("enable_auto_comment", False)
+        ),
+        "enable_metadata_refresh": bool(
+            channel_cfg.get("enable_metadata_refresh", False)
+        ),
+        "video_language": channel_cfg.get("video_language", "en"),
+        "category_id": str(channel_cfg.get("category_id", "27")),
+        "made_for_kids": bool(channel_cfg.get("made_for_kids", False)),
+        "contains_synthetic_media": bool(
+            channel_cfg.get("contains_synthetic_media", True)
         ),
         "quota_safety_limit": int(
             os.environ.get(
@@ -821,8 +830,22 @@ def process_channel(ctx):
 
             if new_videos:
                 video_file = new_videos[0]
+                local_path = None
 
                 try:
+                    local_path = uf.download_drive_file(
+                        drive_service,
+                        video_file["id"],
+                        video_file["name"],
+                    )
+
+                    if is_short:
+                        short_info = uf.validate_short_eligibility(local_path)
+                        run_summary.append(
+                            f"[Short] Eligibility OK: {short_info['duration_seconds']:.1f}s, "
+                            f"{short_info['width']}x{short_info['height']}"
+                        )
+
                     seo_data = generate_seo_content_for_video(
                         trending,
                         ctx["niche_keywords"],
@@ -838,12 +861,6 @@ def process_channel(ctx):
                         build_description_with_hashtags(seo_data)
                     )
 
-                    local_path = uf.download_drive_file(
-                        drive_service,
-                        video_file["id"],
-                        video_file["name"],
-                    )
-
                     publish_at = uf.calculate_next_publish_time(
                         ctx["publish_hour_utc"]
                     )
@@ -855,6 +872,10 @@ def process_channel(ctx):
                         final_description,
                         seo_data.get("tags", []),
                         publish_at=publish_at,
+                        category_id=ctx["category_id"],
+                        video_language=ctx["video_language"],
+                        made_for_kids=ctx["made_for_kids"],
+                        contains_synthetic_media=ctx["contains_synthetic_media"],
                     )
 
                     uf.move_drive_file(
@@ -873,6 +894,8 @@ def process_channel(ctx):
                     )
 
                 except Exception as e:
+                    if local_path:
+                        uf.cleanup_downloaded_file(local_path)
                     run_summary.append(
                         f"[{label}] Upload fail hui "
                         f"'{video_file['name']}' ke liye: {e}"
@@ -897,12 +920,15 @@ def process_channel(ctx):
         datetime.now(timezone.utc).timetuple().tm_yday
     )
 
-    run_metadata_refresh = day_of_year % 3 == 0
+    run_metadata_refresh = (
+        ctx["enable_metadata_refresh"]
+        and day_of_year % 3 == 0
+    )
 
     if not run_metadata_refresh:
         run_summary.append(
             "\nAaj metadata-refresh wala din nahi hai "
-            "(har 3 din chalta hai) "
+            "(channel config mein disabled hai ya aaj 3-day cycle nahi) "
             "— sirf upload calendar check hua."
         )
 

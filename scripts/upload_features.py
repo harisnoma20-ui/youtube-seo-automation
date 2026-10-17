@@ -12,10 +12,55 @@ Zaroori: OAuth credentials mein "drive" scope already add hai
 
 import os
 import io
+import json
+import subprocess
 from datetime import datetime, timezone, timedelta
-from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
-
 DOWNLOAD_DIR = "downloaded_videos"
+YOUTUBE_SHORT_MAX_SECONDS = 180
+
+
+def probe_video(file_path):
+    """Return duration and dimensions using ffprobe (available on GitHub runners)."""
+    result = subprocess.run(
+        [
+            "ffprobe", "-v", "error", "-select_streams", "v:0",
+            "-show_entries", "stream=width,height:format=duration",
+            "-of", "json", file_path,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=True,
+    )
+    payload = json.loads(result.stdout)
+    streams = payload.get("streams", [])
+    if not streams:
+        raise ValueError("Video stream nahi mili.")
+    stream = streams[0]
+    return {
+        "duration_seconds": float(payload.get("format", {}).get("duration", 0)),
+        "width": int(stream.get("width", 0)),
+        "height": int(stream.get("height", 0)),
+    }
+
+
+def validate_short_eligibility(file_path):
+    """Fail before upload when YouTube would not classify the file as a Short."""
+    info = probe_video(file_path)
+    if info["duration_seconds"] > YOUTUBE_SHORT_MAX_SECONDS:
+        raise ValueError(
+            "Shorts folder ki video %.1f seconds hai. YouTube Shorts ki maximum "
+            "duration 180 seconds hai; is file ko Short force nahi kiya ja sakta. "
+            "Isay 3-minute ya chhote vertical clips mein export karein."
+            % info["duration_seconds"]
+        )
+    if info["width"] > info["height"]:
+        raise ValueError(
+            "Shorts folder ki video landscape (%sx%s) hai. YouTube Short ke liye "
+            "square ya vertical export required hai."
+            % (info["width"], info["height"])
+        )
+    return info
 
 
 def list_new_drive_videos(drive_service, folder_id):
@@ -29,6 +74,8 @@ def list_new_drive_videos(drive_service, folder_id):
 
 def download_drive_file(drive_service, file_id, file_name):
     """Drive se video ko GitHub Actions ke temporary storage mein download karna."""
+    from googleapiclient.http import MediaIoBaseDownload
+
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
     destination_path = os.path.join(DOWNLOAD_DIR, file_name)
     request = drive_service.files().get_media(fileId=file_id)
@@ -40,19 +87,40 @@ def download_drive_file(drive_service, file_id, file_name):
     return destination_path
 
 
-def upload_video_to_youtube(youtube, file_path, title, description, tags, privacy_status="public", publish_at=None):
+def upload_video_to_youtube(
+    youtube,
+    file_path,
+    title,
+    description,
+    tags,
+    privacy_status="public",
+    publish_at=None,
+    category_id="27",
+    video_language="en",
+    made_for_kids=False,
+    contains_synthetic_media=True,
+):
     """Video ko YouTube pe upload karna. Agar publish_at diya jaye (ISO format,
     e.g. '2026-08-30T21:00:00Z'), to video 'private' upload hogi aur khud-ba-khud
     usi waqt PUBLIC ho jayegi — matlab upload turant ho sakta hai, lekin
     audience ke peak time pe hi public hogi."""
+    from googleapiclient.http import MediaFileUpload
+
     status = {"privacyStatus": "private", "publishAt": publish_at} if publish_at else {"privacyStatus": privacy_status}
     body = {
         "snippet": {
             "title": title[:100],
             "description": description,
             "tags": tags[:15],
+            "categoryId": str(category_id),
+            "defaultLanguage": video_language,
+            "defaultAudioLanguage": video_language,
         },
-        "status": status,
+        "status": {
+            **status,
+            "selfDeclaredMadeForKids": made_for_kids,
+            "containsSyntheticMedia": contains_synthetic_media,
+        },
     }
     media = MediaFileUpload(file_path, chunksize=-1, resumable=True)
     request = youtube.videos().insert(part="snippet,status", body=body, media_body=media)
