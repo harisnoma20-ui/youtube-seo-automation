@@ -35,7 +35,7 @@
       "category_id": "27",
       "made_for_kids": false,
       "contains_synthetic_media": true,
-      "upload_visibility": "private",
+      "upload_visibility": "scheduled",
       "enabled": true
     }
   ]
