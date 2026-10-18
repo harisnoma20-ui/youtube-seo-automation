@@ -3,7 +3,17 @@ name: YouTube Auto-SEO System
 on:
   schedule:
     - cron: '0 15 * * *'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      force_upload_type:
+        description: "Optional manual test upload"
+        required: false
+        default: "none"
+        type: choice
+        options:
+          - none
+          - medieval_long
+          - medieval_short
 
 permissions:
   contents: write
@@ -43,6 +53,7 @@ jobs:
           WHATSAPP_PHONE: ${{ secrets.WHATSAPP_PHONE }}
           WHATSAPP_APIKEY: ${{ secrets.WHATSAPP_APIKEY }}
           QUOTA_SAFETY_LIMIT: "9000"
+          FORCE_UPLOAD_TYPE: ${{ inputs.force_upload_type || 'none' }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
           YOUTUBE_CHANNEL_ID: ${{ secrets.YOUTUBE_CHANNEL_ID }}
           YOUTUBE_OAUTH_CLIENT_ID: ${{ secrets.YOUTUBE_OAUTH_CLIENT_ID }}
