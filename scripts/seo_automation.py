@@ -75,13 +75,7 @@ def load_channels():
     with open(CHANNELS_CONFIG_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    channels = [
-        c for c in data.get("channels", [])
-        if c.get("enabled", True)
-    ]
-    if not channels:
-        raise SystemExit("Koi enabled channel nahi mila.")
-    return channels
+    return data.get("channels", [])
 
 
 def build_channel_context(channel_cfg):
@@ -824,11 +818,6 @@ def process_channel(ctx):
         and ctx["name"] == "medieval_lives_explained"
     )
 
-    # Manual test mode: sirf selected channel upload kare
-    if force_upload_type != "none" and not (force_long or force_short):
-        shorts_days = []
-        long_days = []
-
     if (
         (today_weekday in shorts_days or force_short)
         and ctx["drive_shorts_toupload"]
@@ -839,6 +828,7 @@ def process_channel(ctx):
             ctx["drive_shorts_toupload"],
             ctx["drive_shorts_uploaded"],
             True,
+            shorts_days,
         ))
 
     if (
@@ -851,6 +841,7 @@ def process_channel(ctx):
             ctx["drive_long_toupload"],
             ctx["drive_long_uploaded"],
             False,
+            long_days,
         ))
 
     if upload_jobs:
@@ -861,7 +852,7 @@ def process_channel(ctx):
             credentials=drive_creds,
         )
 
-        for label, to_folder, uploaded_folder, is_short in upload_jobs:
+        for label, to_folder, uploaded_folder, is_short, upload_days in upload_jobs:
             new_videos = uf.list_new_drive_videos(
                 drive_service,
                 to_folder,
@@ -914,7 +905,10 @@ def process_channel(ctx):
 
                     visibility = ctx["upload_visibility"].lower()
                     publish_at = (
-                        uf.calculate_next_publish_time(ctx["publish_hour_utc"])
+                        uf.calculate_next_publish_time(
+                            ctx["publish_hour_utc"],
+                            upload_days,
+                        )
                         if visibility == "scheduled"
                         else None
                     )
