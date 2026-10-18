@@ -122,6 +122,9 @@ def build_channel_context(channel_cfg):
         "contains_synthetic_media": bool(
             channel_cfg.get("contains_synthetic_media", True)
         ),
+        "upload_visibility": channel_cfg.get(
+            "upload_visibility", "scheduled"
+        ),
         "quota_safety_limit": int(
             os.environ.get(
                 f"{prefix}QUOTA_SAFETY_LIMIT",
@@ -805,8 +808,18 @@ def process_channel(ctx):
 
     upload_jobs = []
 
+    force_upload_type = os.environ.get("FORCE_UPLOAD_TYPE", "none")
+    force_long = (
+        force_upload_type == "medieval_long"
+        and ctx["name"] == "medieval_lives_explained"
+    )
+    force_short = (
+        force_upload_type == "medieval_short"
+        and ctx["name"] == "medieval_lives_explained"
+    )
+
     if (
-        today_weekday in shorts_days
+        (today_weekday in shorts_days or force_short)
         and ctx["drive_shorts_toupload"]
         and ctx["drive_shorts_uploaded"]
     ):
@@ -818,7 +831,7 @@ def process_channel(ctx):
         ))
 
     if (
-        today_weekday in long_days
+        (today_weekday in long_days or force_long)
         and ctx["drive_long_toupload"]
         and ctx["drive_long_uploaded"]
     ):
@@ -881,8 +894,11 @@ def process_channel(ctx):
                         build_description_with_hashtags(seo_data)
                     )
 
-                    publish_at = uf.calculate_next_publish_time(
-                        ctx["publish_hour_utc"]
+                    visibility = ctx["upload_visibility"].lower()
+                    publish_at = (
+                        uf.calculate_next_publish_time(ctx["publish_hour_utc"])
+                        if visibility == "scheduled"
+                        else None
                     )
 
                     new_video_id = uf.upload_video_to_youtube(
@@ -891,6 +907,11 @@ def process_channel(ctx):
                         seo_data["title"],
                         final_description,
                         seo_data.get("tags", []),
+                        privacy_status=(
+                            visibility
+                            if visibility in {"private", "unlisted", "public"}
+                            else "private"
+                        ),
                         publish_at=publish_at,
                         category_id=ctx["category_id"],
                         video_language=ctx["video_language"],
