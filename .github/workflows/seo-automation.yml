@@ -25,11 +25,19 @@ jobs:
       - name: Repo checkout karo
         uses: actions/checkout@v4
 
-      - name: ffmpeg install karo (ffprobe ke liye)
+      - name: Debug config
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
-          ffprobe -version | head -1
+          echo "SHA: $(git rev-parse HEAD)  REF: $GITHUB_REF"
+          git log -1 --oneline -- channels_config.json
+          pwd && ls -la
+          find . -name 'channels_config*' -not -path './.git/*'
+          sha256sum channels_config.json
+          cat channels_config.json
+          echo "--- where do the placeholders live? ---"
+          grep -rn "YOUR NICHE KEYWORDS" . --exclude-dir=.git || true
+          grep -rn "channel1" . --exclude-dir=.git || true
+          echo "--- env reads and defaults in the script ---"
+          grep -n -E "environ|getenv" scripts/seo_automation.py || true
 
       - name: Python setup karo
         uses: actions/setup-python@v5
