@@ -16,7 +16,8 @@ import json
 import subprocess
 from datetime import datetime, timezone, timedelta
 DOWNLOAD_DIR = "downloaded_videos"
-YOUTUBE_SHORT_MAX_SECONDS = 180
+CHANNEL_SHORT_MAX_SECONDS = 40
+CHANNEL_LONG_MIN_SECONDS = 60
 
 
 def probe_video(file_path):
@@ -45,13 +46,13 @@ def probe_video(file_path):
 
 
 def validate_short_eligibility(file_path):
-    """Fail before upload when YouTube would not classify the file as a Short."""
+    """Accept only this channel's vertical/square Shorts of up to 40 seconds."""
     info = probe_video(file_path)
-    if info["duration_seconds"] > YOUTUBE_SHORT_MAX_SECONDS:
+    if info["duration_seconds"] > CHANNEL_SHORT_MAX_SECONDS:
         raise ValueError(
-            "Shorts folder ki video %.1f seconds hai. YouTube Shorts ki maximum "
-            "duration 180 seconds hai; is file ko Short force nahi kiya ja sakta. "
-            "Isay 3-minute ya chhote vertical clips mein export karein."
+            "Shorts folder ki video %.1f seconds hai. Is channel ka Shorts rule "
+            "maximum 40 seconds hai. Isay 40-second ya chhote vertical clip mein "
+            "export karein."
             % info["duration_seconds"]
         )
     if info["width"] > info["height"]:
@@ -59,6 +60,19 @@ def validate_short_eligibility(file_path):
             "Shorts folder ki video landscape (%sx%s) hai. YouTube Short ke liye "
             "square ya vertical export required hai."
             % (info["width"], info["height"])
+        )
+    return info
+
+
+def validate_long_eligibility(file_path):
+    """Accept only videos longer than 60 seconds in the long-video folder."""
+    info = probe_video(file_path)
+    if info["duration_seconds"] <= CHANNEL_LONG_MIN_SECONDS:
+        raise ValueError(
+            "Long Videos folder ki video %.1f seconds hai. Long video ke liye "
+            "duration 60 seconds se zyada honi chahiye. 41-60 second videos "
+            "upload nahi ki jayengi."
+            % info["duration_seconds"]
         )
     return info
 
