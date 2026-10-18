@@ -1,8 +1,7 @@
 {
-  "_readme": "Har channel ke liye ek object. 'enabled': false se channel poora skip hota hai (JSON mein comments nahi hote).",
+  "_readme": "Har channel ke liye ek object niche daalein.",
   "channels": [
     {
-      "enabled": false,
       "name": "hiddenhistory",
       "secret_prefix": "",
       "niche_keywords": "hidden history, untold history, forgotten history, historical mysteries, dark history facts",
@@ -35,8 +34,7 @@
       "category_id": "27",
       "made_for_kids": false,
       "contains_synthetic_media": true,
-      "upload_visibility": "scheduled",
-      "enabled": true
+      "upload_visibility": "scheduled"
     }
   ]
 }
