@@ -33,7 +33,10 @@
       "video_language": "en",
       "category_id": "27",
       "made_for_kids": false,
-      "contains_synthetic_media": true
+      "contains_synthetic_media": true,
+      "made_for_kids": false,
+"contains_synthetic_media": true,
+"upload_visibility": "private"
     }
   ]
 }
