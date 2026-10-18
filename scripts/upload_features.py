@@ -13,6 +13,7 @@ Zaroori: OAuth credentials mein "drive" scope already add hai
 import os
 import io
 import json
+import re
 import subprocess
 from datetime import datetime, timezone, timedelta
 DOWNLOAD_DIR = "downloaded_videos"
@@ -83,7 +84,19 @@ def list_new_drive_videos(drive_service, folder_id):
     response = drive_service.files().list(
         q=query, fields="files(id, name, mimeType)"
     ).execute()
-    return [f for f in response.get("files", []) if f.get("mimeType", "").startswith("video/")]
+    videos = [
+        f for f in response.get("files", [])
+        if f.get("mimeType", "").startswith("video/")
+    ]
+    return sorted(videos, key=lambda item: natural_filename_key(item["name"]))
+
+
+def natural_filename_key(file_name):
+    """Sort numbered names naturally: 1, 2, 3, 10 instead of 1, 10, 2."""
+    return [
+        int(part) if part.isdigit() else part.casefold()
+        for part in re.split(r"(\d+)", file_name)
+    ]
 
 
 def download_drive_file(drive_service, file_id, file_name):
@@ -155,14 +168,29 @@ def move_drive_file(drive_service, file_id, from_folder_id, to_folder_id):
     ).execute()
 
 
-def calculate_next_publish_time(target_hour_utc):
-    """Aaj ka target_hour (UTC) agar guzar chuka hai, to kal ke liye calculate
-    karna — taake video hamesha AGLE available peak-time slot pe public ho."""
-    now = datetime.now(timezone.utc)
-    target = now.replace(hour=target_hour_utc, minute=0, second=0, microsecond=0)
-    if target <= now:
-        target += timedelta(days=1)
-    return target.strftime("%Y-%m-%dT%H:%M:%SZ")
+def calculate_next_publish_time(target_hour_utc, allowed_weekdays=None, now=None):
+    """Return the next future publishing slot on an allowed UTC weekday.
+
+    Python weekdays use Monday=0 through Sunday=6. This also makes a manual
+    workflow run respect the channel's long/Shorts publishing calendar.
+    """
+    now = now or datetime.now(timezone.utc)
+    allowed = set(range(7) if allowed_weekdays is None else allowed_weekdays)
+    if not allowed:
+        raise ValueError("Kam az kam aik upload weekday configure karein.")
+
+    for day_offset in range(8):
+        candidate_day = now + timedelta(days=day_offset)
+        candidate = candidate_day.replace(
+            hour=target_hour_utc,
+            minute=0,
+            second=0,
+            microsecond=0,
+        )
+        if candidate.weekday() in allowed and candidate > now:
+            return candidate.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    raise ValueError("Agla publishing slot calculate nahi ho saka.")
 
 
 def cleanup_downloaded_file(file_path):
