@@ -143,6 +143,15 @@ def build_channel_context(channel_cfg):
         "oauth_refresh_token": os.environ.get(
             f"{prefix}YOUTUBE_OAUTH_REFRESH_TOKEN"
         ),
+        "drive_oauth_refresh_token": os.environ.get(
+            f"{prefix}DRIVE_OAUTH_REFRESH_TOKEN"
+        ),
+        "drive_oauth_client_id": os.environ.get(
+            f"{prefix}DRIVE_OAUTH_CLIENT_ID"
+        ),
+        "drive_oauth_client_secret": os.environ.get(
+            f"{prefix}DRIVE_OAUTH_CLIENT_SECRET"
+        ),
         "drive_shorts_toupload": os.environ.get(
             f"{prefix}DRIVE_SHORTS_TOUPLOAD_FOLDER_ID"
         ),
@@ -163,19 +172,29 @@ def build_channel_context(channel_cfg):
 
 
 # ---------- OAuth ----------
-def get_oauth_credentials(ctx):
+def get_oauth_credentials(ctx, service="youtube"):
+    refresh_token = ctx["oauth_refresh_token"]
+    client_id = ctx["oauth_client_id"]
+    client_secret = ctx["oauth_client_secret"]
+    scopes = [
+        "https://www.googleapis.com/auth/youtube",
+    ]
+    if service == "drive":
+        refresh_token = (
+            ctx.get("drive_oauth_refresh_token")
+            or ctx["oauth_refresh_token"]
+        )
+        scopes = ["https://www.googleapis.com/auth/drive"]
+        client_id = ctx.get("drive_oauth_client_id") or client_id
+        client_secret = ctx.get("drive_oauth_client_secret") or client_secret
+
     return Credentials(
         token=None,
-        refresh_token=ctx["oauth_refresh_token"],
-        client_id=ctx["oauth_client_id"],
-        client_secret=ctx["oauth_client_secret"],
+        refresh_token=refresh_token,
+        client_id=client_id,
+        client_secret=client_secret,
         token_uri="https://oauth2.googleapis.com/token",
-        scopes=[
-            "https://www.googleapis.com/auth/youtube",
-            "https://www.googleapis.com/auth/youtube.force-ssl",
-            "https://www.googleapis.com/auth/yt-analytics.readonly",
-            "https://www.googleapis.com/auth/drive",
-        ],
+        scopes=scopes,
     )
 
 
@@ -811,10 +830,11 @@ def process_channel(ctx):
         ))
 
     if upload_jobs:
+        drive_creds = get_oauth_credentials(ctx, service="drive")
         drive_service = build(
             "drive",
             "v3",
-            credentials=creds,
+            credentials=drive_creds,
         )
 
         for label, to_folder, uploaded_folder, is_short in upload_jobs:

@@ -25,17 +25,38 @@ SETUP (isko chalane se pehle):
      YOUTUBE_OAUTH_CLIENT_ID, YOUTUBE_OAUTH_CLIENT_SECRET, YOUTUBE_OAUTH_REFRESH_TOKEN
 """
 
+import argparse
+
 from google_auth_oauthlib.flow import InstalledAppFlow
 
-SCOPES = [
+YOUTUBE_SCOPES = [
     "https://www.googleapis.com/auth/youtube",
     "https://www.googleapis.com/auth/yt-analytics.readonly",
+]
+
+DRIVE_SCOPES = [
     "https://www.googleapis.com/auth/drive",
 ]
 
 
 def main():
-    flow = InstalledAppFlow.from_client_secrets_file("credentials.json", SCOPES)
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--mode",
+        choices=("youtube", "drive", "all"),
+        default="all",
+        help="Brand channels should use youtube mode; the owner Gmail uses drive mode.",
+    )
+    args = parser.parse_args()
+
+    if args.mode == "youtube":
+        scopes = YOUTUBE_SCOPES
+    elif args.mode == "drive":
+        scopes = DRIVE_SCOPES
+    else:
+        scopes = YOUTUBE_SCOPES + DRIVE_SCOPES
+
+    flow = InstalledAppFlow.from_client_secrets_file("credentials.json", scopes)
     creds = flow.run_local_server(port=0)
 
     print("\n" + "=" * 60)
@@ -43,7 +64,12 @@ def main():
     print("=" * 60)
     print(f"YOUTUBE_OAUTH_CLIENT_ID = {creds.client_id}")
     print(f"YOUTUBE_OAUTH_CLIENT_SECRET = {creds.client_secret}")
-    print(f"YOUTUBE_OAUTH_REFRESH_TOKEN = {creds.refresh_token}")
+    token_name = (
+        "DRIVE_OAUTH_REFRESH_TOKEN"
+        if args.mode == "drive"
+        else "YOUTUBE_OAUTH_REFRESH_TOKEN"
+    )
+    print(f"{token_name} = {creds.refresh_token}")
     print("=" * 60)
     print("\nYe refresh token hamesha kaam karega — dobara ye script chalane")
     print("ki zarurat nahi (jab tak aap khud Google account se access revoke na karein).")
