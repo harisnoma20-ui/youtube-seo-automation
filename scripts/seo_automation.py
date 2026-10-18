@@ -75,7 +75,13 @@ def load_channels():
     with open(CHANNELS_CONFIG_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    return data.get("channels", [])
+    channels = [
+        c for c in data.get("channels", [])
+        if c.get("enabled", True)
+    ]
+    if not channels:
+        raise SystemExit("Koi enabled channel nahi mila.")
+    return channels
 
 
 def build_channel_context(channel_cfg):
@@ -817,6 +823,11 @@ def process_channel(ctx):
         force_upload_type == "medieval_short"
         and ctx["name"] == "medieval_lives_explained"
     )
+
+    # Manual test mode: sirf selected channel upload kare
+    if force_upload_type != "none" and not (force_long or force_short):
+        shorts_days = []
+        long_days = []
 
     if (
         (today_weekday in shorts_days or force_short)
