@@ -878,6 +878,13 @@ def process_channel(ctx):
                             f"[Short] Eligibility OK: {short_info['duration_seconds']:.1f}s, "
                             f"{short_info['width']}x{short_info['height']}"
                         )
+                    else:
+                        long_info = uf.validate_long_eligibility(local_path)
+                        run_summary.append(
+                            f"[Long video] Eligibility OK: "
+                            f"{long_info['duration_seconds']:.1f}s, "
+                            f"{long_info['width']}x{long_info['height']}"
+                        )
 
                     seo_data = generate_seo_content_for_video(
                         trending,
