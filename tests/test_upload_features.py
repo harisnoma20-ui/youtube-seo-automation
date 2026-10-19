@@ -28,32 +28,32 @@ def ffprobe_result(duration, width, height):
 
 class ShortEligibilityTests(unittest.TestCase):
     @patch("upload_features.subprocess.run")
-    def test_accepts_vertical_video_up_to_40_seconds(self, run):
-        run.return_value = ffprobe_result(40, 1080, 1920)
+    def test_accepts_vertical_video_up_to_50_seconds(self, run):
+        run.return_value = ffprobe_result(50, 1080, 1920)
 
         result = uf.validate_short_eligibility("short.mp4")
 
-        self.assertEqual(result["duration_seconds"], 40)
+        self.assertEqual(result["duration_seconds"], 50)
         self.assertEqual((result["width"], result["height"]), (1080, 1920))
 
     @patch("upload_features.subprocess.run")
-    def test_rejects_short_over_40_seconds(self, run):
-        run.return_value = ffprobe_result(41, 1080, 1920)
+    def test_rejects_short_over_50_seconds(self, run):
+        run.return_value = ffprobe_result(51, 1080, 1920)
 
-        with self.assertRaisesRegex(ValueError, "maximum 40 seconds"):
-            uf.validate_short_eligibility("41-second.mp4")
+        with self.assertRaisesRegex(ValueError, "maximum 50 seconds"):
+            uf.validate_short_eligibility("51-second.mp4")
 
     @patch("upload_features.subprocess.run")
     def test_accepts_small_encoder_duration_overrun(self, run):
-        run.return_value = ffprobe_result(40.49, 1080, 1920)
+        run.return_value = ffprobe_result(50.49, 1080, 1920)
 
-        result = uf.validate_short_eligibility("40-second-export.mp4")
+        result = uf.validate_short_eligibility("50-second-export.mp4")
 
-        self.assertEqual(result["duration_seconds"], 40.49)
+        self.assertEqual(result["duration_seconds"], 50.49)
 
     @patch("upload_features.subprocess.run")
     def test_rejects_landscape_video(self, run):
-        run.return_value = ffprobe_result(40, 1920, 1080)
+        run.return_value = ffprobe_result(50, 1920, 1080)
 
         with self.assertRaisesRegex(ValueError, "square ya vertical"):
             uf.validate_short_eligibility("landscape.mp4")
