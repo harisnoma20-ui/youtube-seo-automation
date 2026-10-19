@@ -99,6 +99,13 @@ def natural_filename_key(file_name):
     ]
 
 
+def topic_from_filename(file_name):
+    """Remove queue number and repeated video extensions before SEO generation."""
+    topic = re.sub(r"(?:\.(?:mp4|mov|m4v|webm|avi))+$", "", file_name, flags=re.I)
+    topic = re.sub(r"^\s*\d+\s*[-_. )]+\s*", "", topic)
+    return topic.strip() or file_name
+
+
 def download_drive_file(drive_service, file_id, file_name):
     """Drive se video ko GitHub Actions ke temporary storage mein download karna."""
     from googleapiclient.http import MediaIoBaseDownload
