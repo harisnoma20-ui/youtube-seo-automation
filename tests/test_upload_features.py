@@ -72,6 +72,12 @@ class QueueAndScheduleTests(unittest.TestCase):
         ordered = sorted(names, key=uf.natural_filename_key)
         self.assertEqual(ordered, ["1.mp4", "2.mp4", "03 winter.mp4", "10.mp4"])
 
+    def test_topic_removes_queue_number_and_duplicate_extension(self):
+        result = uf.topic_from_filename(
+            "01 - What Did Medieval Peasants Eat.mp4.mp4"
+        )
+        self.assertEqual(result, "What Did Medieval Peasants Eat")
+
     def test_manual_run_uses_next_allowed_weekday(self):
         # Sunday 22:00 UTC; medieval long videos publish on Monday at 21:00.
         now = datetime(2026, 10, 18, 22, 0, tzinfo=timezone.utc)
