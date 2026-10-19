@@ -17,7 +17,7 @@ import re
 import subprocess
 from datetime import datetime, timezone, timedelta
 DOWNLOAD_DIR = "downloaded_videos"
-CHANNEL_SHORT_MAX_SECONDS = 40
+CHANNEL_SHORT_MAX_SECONDS = 50
 SHORT_DURATION_TOLERANCE_SECONDS = 0.5
 CHANNEL_LONG_MIN_SECONDS = 60
 
@@ -48,7 +48,7 @@ def probe_video(file_path):
 
 
 def validate_short_eligibility(file_path):
-    """Accept only this channel's vertical/square Shorts of up to 40 seconds."""
+    """Accept only this channel's vertical/square Shorts of up to 50 seconds."""
     info = probe_video(file_path)
     if (
         info["duration_seconds"]
@@ -56,7 +56,7 @@ def validate_short_eligibility(file_path):
     ):
         raise ValueError(
             "Shorts folder ki video %.2f seconds hai. Is channel ka Shorts rule "
-            "maximum 40 seconds hai. Isay 40-second ya chhote vertical clip mein "
+            "maximum 50 seconds hai. Isay 50-second ya chhote vertical clip mein "
             "export karein."
             % info["duration_seconds"]
         )
