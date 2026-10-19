@@ -44,6 +44,14 @@ class ShortEligibilityTests(unittest.TestCase):
             uf.validate_short_eligibility("41-second.mp4")
 
     @patch("upload_features.subprocess.run")
+    def test_accepts_small_encoder_duration_overrun(self, run):
+        run.return_value = ffprobe_result(40.49, 1080, 1920)
+
+        result = uf.validate_short_eligibility("40-second-export.mp4")
+
+        self.assertEqual(result["duration_seconds"], 40.49)
+
+    @patch("upload_features.subprocess.run")
     def test_rejects_landscape_video(self, run):
         run.return_value = ffprobe_result(40, 1920, 1080)
 
