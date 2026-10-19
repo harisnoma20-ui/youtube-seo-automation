@@ -891,7 +891,7 @@ def process_channel(ctx):
                     seo_data = generate_seo_content_for_video(
                         trending,
                         ctx["niche_keywords"],
-                        video_file["name"],
+                        uf.topic_from_filename(video_file["name"]),
                         used_titles,
                         ctx["target_audience_label"],
                         is_short,
@@ -1200,9 +1200,20 @@ def main():
         return
 
     all_messages = []
+    force_upload_type = os.environ.get("FORCE_UPLOAD_TYPE", "none")
 
     for channel_cfg in channels:
         ctx = build_channel_context(channel_cfg)
+
+        # A manual Medieval upload must never process another channel's queue.
+        if (
+            force_upload_type in {"medieval_long", "medieval_short"}
+            and ctx["name"] != "medieval_lives_explained"
+        ):
+            print(
+                f"[{ctx['name']}] Manual Medieval run mein channel skip."
+            )
+            continue
 
         try:
             summary = process_channel(ctx)
