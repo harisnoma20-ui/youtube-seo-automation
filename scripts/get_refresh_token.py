@@ -1,31 +1,44 @@
 """
-Ek-Dafa OAuth Refresh Token Generate Karne Wala Script
+OAuth Refresh Token Generator (FIXED VERSION)
 -------------------------------------------------------------------
-Ye script sirf EK DAFA aapke apne PC/laptop pe chalani hai (GitHub Actions
-pe nahi). Ye ek browser window kholegi jahan aap apne Google account se
-login/permission allow karenge, aur aakhir mein 3 values print hongi jo
-aapko GitHub Secrets mein daalni hain.
+Ye script aapke apne PC/laptop par chalani hai (GitHub Actions par nahi).
+Browser khulega, aap apne Google account se login karke permission denge,
+aur aakhir mein values print hongi jo GitHub Secrets mein daalni hain.
 
-SETUP (isko chalane se pehle):
-  1. Google Cloud Console (console.cloud.google.com) mein jayein
-  2. Naya project banayein (ya purana select karein)
-  3. "APIs & Services" -> "Library" mein jayein, ye 3 APIs enable karein:
+Is version mein fixes:
+  - access_type="offline" + prompt="consent" -> har baar NAYA refresh token
+    milta hai (pehle kabhi kabhi refresh_token None aa jata tha).
+  - Agar refresh token na mile to saaf error aata hai.
+  - Kisi aur credentials file ka path dene ka option (--client-file).
+  - Purana galat comment hata diya ("hamesha kaam karega" sahi nahi tha).
+
+SETUP:
+  1. Google Cloud Console mein ye APIs enable hon:
      - YouTube Data API v3
      - YouTube Analytics API
      - Google Drive API
-  4. "APIs & Services" -> "Credentials" -> "Create Credentials" -> "OAuth client ID"
-     - Application type: "Desktop app"
-     - Naam kuch bhi rakh dein
-  5. Bani hui credential ko download karein (JSON file), aur isi folder
-     mein "credentials.json" naam se save karein
-  6. Terminal mein: pip install google-auth-oauthlib
-  7. Terminal mein: python get_refresh_token.py
-  8. Browser khulega, apne Google account se login/allow karein
-  9. Terminal mein 3 values print hongi — GitHub Secrets mein daal dein:
-     YOUTUBE_OAUTH_CLIENT_ID, YOUTUBE_OAUTH_CLIENT_SECRET, YOUTUBE_OAUTH_REFRESH_TOKEN
+  2. Credentials -> OAuth client ID -> "Desktop app" banao, JSON download karke
+     isi folder mein "credentials.json" naam se rakho.
+  3. OAuth consent screen (Audience) ka status "In production" ho
+     (Testing mode mein refresh token 7 din mein expire ho jata hai).
+  4. Purani token.json ya purana token delete kar do.
+  5. pip install google-auth-oauthlib
+  6. python get_refresh_token.py --mode youtube
+  7. Browser mein WOHI Google account/brand channel chuno jis par channel hai.
+  8. "Google hasn't verified this app" aaye to Advanced -> Go to app (unsafe).
+  9. Saari permissions allow karo (checkbox pure select hon).
+  10. Print hui values GitHub Secrets mein update karo.
+
+IMPORTANT:
+  - Printed secrets kisi ko share mat karo aur public repo mein na daalo.
+  - Ek hi refresh token GitHub Secret mein rakho; baar baar naye tokens
+    banane se purane tokens invalid ho sakte hain.
+  - Token tab bhi invalid ho sakta hai jab aap password badlen, access
+    revoke karen, ya app dobara Testing mode mein chali jaye.
 """
 
 import argparse
+import sys
 
 from google_auth_oauthlib.flow import InstalledAppFlow
 
@@ -45,7 +58,12 @@ def main():
         "--mode",
         choices=("youtube", "drive", "all"),
         default="all",
-        help="Brand channels should use youtube mode; the owner Gmail uses drive mode.",
+        help="Brand channels youtube mode use karein; owner Gmail drive mode.",
+    )
+    parser.add_argument(
+        "--client-file",
+        default="credentials.json",
+        help="OAuth client secrets JSON ka path (default: credentials.json)",
     )
     args = parser.parse_args()
 
@@ -56,23 +74,39 @@ def main():
     else:
         scopes = YOUTUBE_SCOPES + DRIVE_SCOPES
 
-    flow = InstalledAppFlow.from_client_secrets_file("credentials.json", scopes)
-    creds = flow.run_local_server(port=0)
+    flow = InstalledAppFlow.from_client_secrets_file(args.client_file, scopes)
 
-    print("\n" + "=" * 60)
-    print("YE 3 VALUES GITHUB SECRETS MEIN DAAL DEIN:")
-    print("=" * 60)
-    print(f"YOUTUBE_OAUTH_CLIENT_ID = {creds.client_id}")
-    print(f"YOUTUBE_OAUTH_CLIENT_SECRET = {creds.client_secret}")
+    # access_type=offline + prompt=consent = hamesha naya refresh token milega
+    creds = flow.run_local_server(
+        port=0,
+        access_type="offline",
+        prompt="consent",
+    )
+
+    if not creds.refresh_token:
+        print("\nERROR: Refresh token nahi mila.")
+        print("Fix: https://myaccount.google.com/permissions se is app ka")
+        print("access remove karein, phir script dobara chalayen.")
+        sys.exit(1)
+
     token_name = (
         "DRIVE_OAUTH_REFRESH_TOKEN"
         if args.mode == "drive"
         else "YOUTUBE_OAUTH_REFRESH_TOKEN"
     )
+
+    print("\n" + "=" * 60)
+    print("YE VALUES GITHUB SECRETS MEIN DAAL DEIN (purane replace karke):")
+    print("=" * 60)
+    print(f"YOUTUBE_OAUTH_CLIENT_ID = {creds.client_id}")
+    print(f"YOUTUBE_OAUTH_CLIENT_SECRET = {creds.client_secret}")
     print(f"{token_name} = {creds.refresh_token}")
     print("=" * 60)
-    print("\nYe refresh token hamesha kaam karega — dobara ye script chalane")
-    print("ki zarurat nahi (jab tak aap khud Google account se access revoke na karein).")
+    print("\nNOTE: Ye token tab tak chalega jab tak:")
+    print("  - app 'In production' rahe,")
+    print("  - aap Google access revoke na karein ya password na badlen,")
+    print("  - aur aap isi client se bahut zyada naye tokens na banayen.")
+    print("Ye values kisi ko share na karein.")
 
 
 if __name__ == "__main__":
