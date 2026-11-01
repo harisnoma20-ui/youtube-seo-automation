@@ -86,6 +86,24 @@ class QueueAndScheduleTests(unittest.TestCase):
         )
         self.assertEqual(result, "What Did Medieval Peasants Eat")
 
+    def test_matching_content_brief_uses_same_numbered_base_name(self):
+        class Files:
+            def list(self, **_kwargs):
+                return self
+
+            def execute(self):
+                return {"files": [
+                    {"id": "wrong", "name": "02 - Winter.txt", "mimeType": "text/plain"},
+                    {"id": "right", "name": "01 - Winter.md", "mimeType": "text/markdown"},
+                ]}
+
+        class Drive:
+            def files(self):
+                return Files()
+
+        result = uf.find_matching_content_brief(Drive(), "folder", "01 - Winter.mp4")
+        self.assertEqual(result["id"], "right")
+
     def test_manual_run_uses_next_allowed_weekday(self):
         # Sunday 22:00 UTC; medieval long videos publish on Monday at 21:00.
         now = datetime(2026, 10, 18, 22, 0, tzinfo=timezone.utc)

@@ -95,6 +95,35 @@ def list_new_drive_videos(drive_service, folder_id):
     return sorted(videos, key=lambda item: natural_filename_key(item["name"]))
 
 
+def find_matching_content_brief(drive_service, folder_id, video_name):
+    """Find an optional .txt/.md brief with the same queued base name.
+
+    Example: ``01 - Winter.mp4`` can use ``01 - Winter.txt``.  The brief lets
+    SEO generation describe the real video instead of guessing from a filename.
+    """
+    query = f"'{folder_id}' in parents and trashed = false"
+    response = drive_service.files().list(
+        q=query, fields="files(id, name, mimeType)"
+    ).execute()
+    video_stem = re.sub(
+        r"(?:\.(?:mp4|mov|m4v|webm|avi))+$", "", video_name, flags=re.I
+    ).casefold()
+    for item in response.get("files", []):
+        name = item.get("name", "")
+        brief_stem, extension = os.path.splitext(name)
+        if extension.casefold() in {".txt", ".md"} and brief_stem.casefold() == video_stem:
+            return item
+    return None
+
+
+def download_drive_text(drive_service, file_id, max_characters=12000):
+    """Download a small UTF-8 text/Markdown brief from Drive."""
+    payload = drive_service.files().get_media(fileId=file_id).execute()
+    if isinstance(payload, bytes):
+        payload = payload.decode("utf-8", errors="replace")
+    return str(payload).strip()[:max_characters]
+
+
 def natural_filename_key(file_name):
     """Sort numbered names naturally: 1, 2, 3, 10 instead of 1, 10, 2."""
     return [

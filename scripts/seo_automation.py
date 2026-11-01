@@ -244,6 +244,7 @@ def generate_seo_content_for_video(
     used_titles,
     target_audience="US and UK",
     is_short=False,
+    content_context="",
 ):
     avoid_note = (
         "\nYe titles already is run mein use ho chuke hain, "
@@ -259,21 +260,35 @@ def generate_seo_content_for_video(
         else ""
     )
 
+    context_note = (
+        f'\nActual video script/brief (ground truth):\n"""{content_context}"""\n'
+        if content_context
+        else "\nNo script/brief was supplied. Do not invent scenes, facts, or claims.\n"
+    )
+
     prompt = f"""Trending keywords: {', '.join(trending_keywords)}
 Niche: {niche}
 Target audience: {target_audience} viewers
 Is video ka current title: "{current_title}"
-{avoid_note}{shorts_note}
+{avoid_note}{shorts_note}{context_note}
 
 Isi video (topic wahi rahega, sirf SEO behtar karo) ke liye naya
 SEO-optimized title, description, tags, aur hashtags generate karo.
 {target_audience} audience ki language style, phrasing, aur cultural
 context ke hisab se likho.
 
+Rules:
+- Script/brief ho to metadata sirf usi mein maujood content par based ho.
+- Country names ko title, description ya tags mein targeting trick ke taur par mat likho.
+- Long-video title clear curiosity question/promise ho; generic suffixes jaise
+  "Explained", "Revealed" aur "Deep Dive" avoid karo.
+- Description ki pehli 2 lines exact topic aur viewer payoff batayen.
+- Unrelated trending keyword use na karo aur koi fact invent na karo.
+
 Sirf valid JSON return karo:
 {{"title": "...", "description": "...", "tags": ["...", "..."], "hashtags": ["#...", "#..."]}}
 
-Title 60 characters se kam, unique, description 2-3 paragraphs,
+Title 60 characters se kam, unique, description 1-2 concise paragraphs,
 10-15 relevant tags, 3-5 hashtags."""
 
     response = requests.post(
@@ -866,6 +881,7 @@ def process_channel(ctx):
             if new_videos:
                 video_file = new_videos[0]
                 local_path = None
+                brief_file = None
 
                 try:
                     local_path = uf.download_drive_file(
@@ -888,6 +904,19 @@ def process_channel(ctx):
                             f"{long_info['width']}x{long_info['height']}"
                         )
 
+                    brief_file = uf.find_matching_content_brief(
+                        drive_service, to_folder, video_file["name"]
+                    )
+                    content_context = (
+                        uf.download_drive_text(drive_service, brief_file["id"])
+                        if brief_file
+                        else ""
+                    )
+                    run_summary.append(
+                        f"[{label}] Matching script/brief: "
+                        + (brief_file["name"] if brief_file else "not supplied")
+                    )
+
                     seo_data = generate_seo_content_for_video(
                         trending,
                         ctx["niche_keywords"],
@@ -895,6 +924,7 @@ def process_channel(ctx):
                         used_titles,
                         ctx["target_audience_label"],
                         is_short,
+                        content_context,
                     )
 
                     used_titles.append(seo_data["title"])
@@ -937,6 +967,13 @@ def process_channel(ctx):
                         to_folder,
                         uploaded_folder,
                     )
+                    if brief_file:
+                        uf.move_drive_file(
+                            drive_service,
+                            brief_file["id"],
+                            to_folder,
+                            uploaded_folder,
+                        )
 
                     uf.cleanup_downloaded_file(local_path)
 

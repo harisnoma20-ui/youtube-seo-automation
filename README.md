@@ -25,10 +25,24 @@ Setup ke baaki steps PDF guide follow karein.
 
 `DRIVE_SHORTS_TOUPLOAD_FOLDER_ID` ka folder upload intent batata hai, lekin
 YouTube classification force nahi karta. Automation upload se pehle file ko
-check karti hai: duration 180 seconds ya kam aur aspect ratio square/vertical
+check karti hai: channel rule ke mutabiq duration 50 seconds ya kam (0.5-second
+encoder tolerance ke sath) aur aspect ratio square/vertical
 hona zaroori hai. Invalid file upload nahi hoti aur `Uploaded` folder mein move
-nahi hoti. 10-minute video ko Short banane ke liye pehle usay 3-minute ya chhote
+nahi hoti. 10-minute video ko Short banane ke liye pehle usay 50-second ya chhote
 vertical clips mein export karna hoga.
+
+## Content-grounded SEO (recommended)
+
+Har video ke saath same base-name wali `.txt` ya `.md` script/brief ToUpload
+folder mein rakhein. Misal:
+
+- `01 - What Did Medieval Peasants Eat.mp4`
+- `01 - What Did Medieval Peasants Eat.txt`
+
+Automation matching brief ko title, description aur tags banane ke liye ground
+truth ke taur par use karegi, aur successful upload ke baad dono files Uploaded
+folder mein move kar degi. Brief na ho to filename use hoga, lekin AI ko facts
+ya scenes invent karne ki ijazat nahi di jati.
 
 ## Premium-country targeting
 
