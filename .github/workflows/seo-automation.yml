@@ -87,6 +87,6 @@ jobs:
         run: |
           git config user.name "seo-automation-bot"
           git config user.email "actions@github.com"
-          git add tracking_sheet_*.xlsx winning_keywords_*.json || true
+          git add tracking_sheet_*.xlsx winning_keywords_*.json processed_upload_hashes.json || true
           git diff --cached --quiet || git commit -m "Data update: $(date -u +'%Y-%m-%d %H:%M UTC')"
           git push || true

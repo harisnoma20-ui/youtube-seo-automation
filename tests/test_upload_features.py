@@ -1,6 +1,7 @@
 import json
 import subprocess
 import sys
+import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
@@ -75,6 +76,24 @@ class ShortEligibilityTests(unittest.TestCase):
 
 
 class QueueAndScheduleTests(unittest.TestCase):
+    def test_duplicate_hash_is_scoped_to_channel_and_persisted(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = str(Path(temp_dir) / "hashes.json")
+            media_path = Path(temp_dir) / "short.mp4"
+            media_path.write_bytes(b"same exact video bytes")
+            file_hash = uf.calculate_file_sha256(media_path)
+
+            self.assertFalse(
+                uf.is_duplicate_upload("medieval", file_hash, db_path)
+            )
+            uf.record_upload_hash("medieval", file_hash, db_path)
+            self.assertTrue(
+                uf.is_duplicate_upload("medieval", file_hash, db_path)
+            )
+            self.assertFalse(
+                uf.is_duplicate_upload("other-channel", file_hash, db_path)
+            )
+
     def test_natural_filename_order(self):
         names = ["10.mp4", "2.mp4", "1.mp4", "03 winter.mp4"]
         ordered = sorted(names, key=uf.natural_filename_key)

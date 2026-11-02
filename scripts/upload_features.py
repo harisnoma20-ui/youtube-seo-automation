@@ -15,11 +15,46 @@ import io
 import json
 import re
 import subprocess
+import hashlib
 from datetime import datetime, timezone, timedelta
 DOWNLOAD_DIR = "downloaded_videos"
 CHANNEL_SHORT_MAX_SECONDS = 50
 SHORT_DURATION_TOLERANCE_SECONDS = 0.5
 CHANNEL_LONG_MIN_SECONDS = 60
+UPLOAD_HASH_DB_PATH = "processed_upload_hashes.json"
+
+
+def calculate_file_sha256(file_path, chunk_size=1024 * 1024):
+    """Return a stable content fingerprint for an uploaded media file."""
+    digest = hashlib.sha256()
+    with open(file_path, "rb") as source:
+        for chunk in iter(lambda: source.read(chunk_size), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def load_upload_hashes(db_path=UPLOAD_HASH_DB_PATH):
+    """Load per-channel hashes; tolerate a missing database on first run."""
+    if not os.path.exists(db_path):
+        return {}
+    with open(db_path, "r", encoding="utf-8") as source:
+        payload = json.load(source)
+    return payload if isinstance(payload, dict) else {}
+
+
+def is_duplicate_upload(channel_name, file_hash, db_path=UPLOAD_HASH_DB_PATH):
+    return file_hash in load_upload_hashes(db_path).get(channel_name, [])
+
+
+def record_upload_hash(channel_name, file_hash, db_path=UPLOAD_HASH_DB_PATH):
+    """Persist a successful upload fingerprint for future GitHub Action runs."""
+    payload = load_upload_hashes(db_path)
+    hashes = payload.setdefault(channel_name, [])
+    if file_hash not in hashes:
+        hashes.append(file_hash)
+    with open(db_path, "w", encoding="utf-8") as destination:
+        json.dump(payload, destination, indent=2, sort_keys=True)
+        destination.write("\n")
 
 
 def probe_video(file_path):

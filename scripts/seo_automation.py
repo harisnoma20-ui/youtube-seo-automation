@@ -882,6 +882,7 @@ def process_channel(ctx):
                 video_file = new_videos[0]
                 local_path = None
                 brief_file = None
+                video_hash = None
 
                 try:
                     local_path = uf.download_drive_file(
@@ -902,6 +903,13 @@ def process_channel(ctx):
                             f"[Long video] Eligibility OK: "
                             f"{long_info['duration_seconds']:.1f}s, "
                             f"{long_info['width']}x{long_info['height']}"
+                        )
+
+                    video_hash = uf.calculate_file_sha256(local_path)
+                    if uf.is_duplicate_upload(ctx["name"], video_hash):
+                        raise ValueError(
+                            "Duplicate video blocked: isi exact media file ko is channel "
+                            "par pehle upload kiya ja chuka hai."
                         )
 
                     brief_file = uf.find_matching_content_brief(
@@ -974,6 +982,8 @@ def process_channel(ctx):
                             to_folder,
                             uploaded_folder,
                         )
+
+                    uf.record_upload_hash(ctx["name"], video_hash)
 
                     uf.cleanup_downloaded_file(local_path)
 
