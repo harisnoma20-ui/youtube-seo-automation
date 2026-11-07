@@ -35,6 +35,26 @@
       "made_for_kids": false,
       "contains_synthetic_media": true,
       "upload_visibility": "scheduled"
+    },
+    {
+      "name": "born_to_wild",
+      "secret_prefix": "WILDLIFE_",
+      "enabled": false,
+      "channel_handle": "@borntowild-u9b",
+      "niche_keywords": "cinematic wildlife documentaries, animal life journeys, wildlife survival, animal behavior, nature stories",
+      "target_audience_geos": "US,GB,CA,AU",
+      "target_audience_label": "English-speaking wildlife documentary viewers in the United States, United Kingdom, Canada, and Australia",
+      "publish_hour_utc": 21,
+      "shorts_upload_days": "1,3,5",
+      "long_upload_days": "6",
+      "enable_caption_improvement": false,
+      "enable_auto_comment": false,
+      "enable_metadata_refresh": false,
+      "video_language": "en",
+      "category_id": "15",
+      "made_for_kids": false,
+      "contains_synthetic_media": true,
+      "upload_visibility": "scheduled"
     }
   ]
 }
