@@ -15,6 +15,7 @@ import os
 import re
 import json
 import traceback
+import argparse
 import requests
 from datetime import datetime, timezone
 
@@ -84,6 +85,9 @@ def build_channel_context(channel_cfg):
 
     ctx = {
         "name": name,
+        "secret_prefix": prefix,
+        "enabled": channel_cfg.get("enabled", True),
+        "channel_handle": channel_cfg.get("channel_handle"),
         "niche_keywords": channel_cfg.get(
             "niche_keywords",
             "your niche keywords here",
@@ -683,6 +687,8 @@ def process_channel(ctx):
         f"{datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}"
     ]
 
+    verify_youtube_identity(build("youtube", "v3", credentials=get_oauth_credentials(ctx)), ctx)
+
     diagnosis_notes = []
 
     quota = qf.QuotaTracker(
@@ -805,6 +811,7 @@ def process_channel(ctx):
     )
 
     used_titles = []
+    upload_errors = []
 
     # ---------- Calendar-Based Upload ----------
     today_weekday = datetime.now(timezone.utc).weekday()
@@ -969,6 +976,15 @@ def process_channel(ctx):
                         contains_synthetic_media=ctx["contains_synthetic_media"],
                     )
 
+                    # Record immediately: a later Drive move must not allow a re-upload.
+                    uf.record_upload_hash(ctx["name"], video_hash)
+                    log_to_tracking_sheet(
+                        new_video_id, seo_data,
+                        dict(views="N/A", impressions="N/A", ctr="N/A", avg_view_duration="N/A"),
+                        None, ctx["tracking_file"], status="Uploaded",
+                        diagnosis=f"Source: {video_file['id']}; publishAt: {publish_at}",
+                    )
+
                     uf.move_drive_file(
                         drive_service,
                         video_file["id"],
@@ -983,8 +999,6 @@ def process_channel(ctx):
                             uploaded_folder,
                         )
 
-                    uf.record_upload_hash(ctx["name"], video_hash)
-
                     uf.cleanup_downloaded_file(local_path)
 
                     run_summary.append(
@@ -994,6 +1008,7 @@ def process_channel(ctx):
                     )
 
                 except Exception as e:
+                    upload_errors.append(f"{label}: {e}")
                     if local_path:
                         uf.cleanup_downloaded_file(local_path)
                     run_summary.append(
@@ -1235,22 +1250,101 @@ def process_channel(ctx):
             )
         )
 
+    if upload_errors:
+        print("\n".join(run_summary))
+        raise RuntimeError("Upload jobs failed: " + "; ".join(upload_errors))
     return run_summary
+
+
+def verify_youtube_identity(youtube, ctx):
+    expected = ctx.get("youtube_channel_id")
+    if not expected:
+        raise ValueError("Missing " + ctx["secret_prefix"] + "YOUTUBE_CHANNEL_ID")
+    items = youtube.channels().list(part="id,snippet", mine=True).execute().get("items", [])
+    if len(items) != 1 or items[0]["id"] != expected:
+        raise ValueError("OAuth channel does not match configured channel; no writes allowed.")
+    handle = ctx.get("channel_handle")
+    if handle:
+        resolved = youtube.channels().list(part="id", forHandle=handle).execute().get("items", [])
+        if len(resolved) != 1 or resolved[0]["id"] != expected:
+            raise ValueError("Configured channel ID does not match " + handle)
+    return items[0].get("snippet", {}).get("title", expected)
+
+
+def preflight_channel(ctx):
+    """Read-only checks. Never download media, generate SEO, upload, or move files."""
+    required = {
+        "YOUTUBE_API_KEY": "youtube_api_key",
+        "YOUTUBE_CHANNEL_ID": "youtube_channel_id",
+        "YOUTUBE_OAUTH_CLIENT_ID": "oauth_client_id",
+        "YOUTUBE_OAUTH_CLIENT_SECRET": "oauth_client_secret",
+        "YOUTUBE_OAUTH_REFRESH_TOKEN": "oauth_refresh_token",
+        "DRIVE_SHORTS_TOUPLOAD_FOLDER_ID": "drive_shorts_toupload",
+        "DRIVE_SHORTS_UPLOADED_FOLDER_ID": "drive_shorts_uploaded",
+        "DRIVE_LONG_TOUPLOAD_FOLDER_ID": "drive_long_toupload",
+        "DRIVE_LONG_UPLOADED_FOLDER_ID": "drive_long_uploaded",
+    }
+    missing = [ctx["secret_prefix"] + key for key, field in required.items() if not ctx.get(field)]
+    if missing:
+        raise ValueError("Missing secrets: " + ", ".join(missing))
+    if not GROQ_API_KEY:
+        raise ValueError("Missing GROQ_API_KEY")
+    folder_keys = [field for key, field in required.items() if key.startswith("DRIVE_")]
+    folders = [ctx[field] for field in folder_keys]
+    if len(set(folders)) != len(folders):
+        raise ValueError("Drive source/destination folders must all be distinct.")
+    youtube = build("youtube", "v3", credentials=get_oauth_credentials(ctx))
+    title = verify_youtube_identity(youtube, ctx)
+    build("youtube", "v3", developerKey=ctx["youtube_api_key"]).channels().list(
+        part="id", id=ctx["youtube_channel_id"]
+    ).execute()
+    drive = build("drive", "v3", credentials=get_oauth_credentials(ctx, service="drive"))
+    for key in folder_keys:
+        folder = drive.files().get(fileId=ctx[key], fields="id,mimeType,trashed,capabilities(canAddChildren)").execute()
+        if folder.get("trashed") or folder.get("mimeType") != "application/vnd.google-apps.folder":
+            raise ValueError(key + " is not an accessible active folder")
+        if key.endswith("uploaded") and not folder.get("capabilities", {}).get("canAddChildren"):
+            raise ValueError(key + " does not allow adding uploaded files")
+    for key in ("drive_shorts_toupload", "drive_long_toupload"):
+        count = len(uf.list_new_drive_videos(drive, ctx[key]))
+        print(f"[{ctx['name']}] {key}: {count} queued videos (read only)")
+    print(f"[{ctx['name']}] PASS: {title}; OAuth identity and four Drive folders verified.")
 
 
 # ---------- Main ----------
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--preflight", action="store_true")
+    parser.add_argument("--channel", default="all")
+    args = parser.parse_args()
     channels = load_channels()
+    if args.channel != "all":
+        channels = [c for c in channels if c["name"] == args.channel]
+        if not channels:
+            raise SystemExit("Unknown channel: " + args.channel)
+    if args.preflight:
+        failures = 0
+        for channel in channels:
+            try:
+                preflight_channel(build_channel_context(channel))
+            except Exception as exc:
+                print(f"[{channel['name']}] FAIL: {exc}")
+                failures += 1
+        raise SystemExit(1 if failures else 0)
 
     if not channels:
         print("channels_config.json mein koi channel nahi mila.")
         return
 
     all_messages = []
+    failed_channels = []
     force_upload_type = os.environ.get("FORCE_UPLOAD_TYPE", "none")
 
     for channel_cfg in channels:
         ctx = build_channel_context(channel_cfg)
+        if not ctx["enabled"]:
+            print(f"[{ctx['name']}] Disabled pending credential verification; use --preflight to check.")
+            continue
 
         # A manual Medieval upload must never process another channel's queue.
         if (
@@ -1273,6 +1367,7 @@ def main():
                 f"{traceback.format_exc()[:1200]}"
             )
 
+            failed_channels.append(ctx["name"])
             print(error_text)
             all_messages.append(error_text)
 
@@ -1282,6 +1377,8 @@ def main():
     print(final_report)
 
     send_whatsapp_message(final_report)
+    if failed_channels:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
