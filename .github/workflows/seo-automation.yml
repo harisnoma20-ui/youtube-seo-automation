@@ -5,6 +5,24 @@ on:
     - cron: '0 15 * * *'
   workflow_dispatch:
     inputs:
+      run_mode:
+        description: "Read-only verification or normal calendar execution"
+        required: true
+        default: preflight
+        type: choice
+        options:
+          - preflight
+          - execute
+      channel:
+        description: "Channel to process"
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - hiddenhistory
+          - medieval_lives_explained
+          - born_to_wild
       force_upload_type:
         description: "Optional manual test upload"
         required: false
@@ -14,6 +32,10 @@ on:
           - none
           - medieval_long
           - medieval_short
+
+concurrency:
+  group: youtube-seo-automation
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -53,8 +75,13 @@ jobs:
           sudo apt-get install -y ffmpeg
           ffprobe -version
 
+      - name: Run offline regression tests
+        run: python -m unittest discover -s tests -v
+
       - name: SEO automation script chalao
         env:
+          RUN_MODE: ${{ inputs.run_mode || 'execute' }}
+          SELECTED_CHANNEL: ${{ inputs.channel || 'all' }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           WHATSAPP_PHONE: ${{ secrets.WHATSAPP_PHONE }}
           WHATSAPP_APIKEY: ${{ secrets.WHATSAPP_APIKEY }}
@@ -81,12 +108,30 @@ jobs:
           MEDIEVAL_DRIVE_SHORTS_UPLOADED_FOLDER_ID: ${{ secrets.MEDIEVAL_DRIVE_SHORTS_UPLOADED_FOLDER_ID }}
           MEDIEVAL_DRIVE_LONG_TOUPLOAD_FOLDER_ID: ${{ secrets.MEDIEVAL_DRIVE_LONG_TOUPLOAD_FOLDER_ID }}
           MEDIEVAL_DRIVE_LONG_UPLOADED_FOLDER_ID: ${{ secrets.MEDIEVAL_DRIVE_LONG_UPLOADED_FOLDER_ID }}
-        run: python scripts/seo_automation.py
+          WILDLIFE_YOUTUBE_API_KEY: ${{ secrets.WILDLIFE_YOUTUBE_API_KEY }}
+          WILDLIFE_YOUTUBE_CHANNEL_ID: ${{ secrets.WILDLIFE_YOUTUBE_CHANNEL_ID }}
+          WILDLIFE_YOUTUBE_OAUTH_CLIENT_ID: ${{ secrets.WILDLIFE_YOUTUBE_OAUTH_CLIENT_ID }}
+          WILDLIFE_YOUTUBE_OAUTH_CLIENT_SECRET: ${{ secrets.WILDLIFE_YOUTUBE_OAUTH_CLIENT_SECRET }}
+          WILDLIFE_YOUTUBE_OAUTH_REFRESH_TOKEN: ${{ secrets.WILDLIFE_YOUTUBE_OAUTH_REFRESH_TOKEN }}
+          WILDLIFE_DRIVE_OAUTH_CLIENT_ID: ${{ secrets.WILDLIFE_DRIVE_OAUTH_CLIENT_ID }}
+          WILDLIFE_DRIVE_OAUTH_CLIENT_SECRET: ${{ secrets.WILDLIFE_DRIVE_OAUTH_CLIENT_SECRET }}
+          WILDLIFE_DRIVE_OAUTH_REFRESH_TOKEN: ${{ secrets.WILDLIFE_DRIVE_OAUTH_REFRESH_TOKEN }}
+          WILDLIFE_DRIVE_SHORTS_TOUPLOAD_FOLDER_ID: ${{ secrets.WILDLIFE_DRIVE_SHORTS_TOUPLOAD_FOLDER_ID }}
+          WILDLIFE_DRIVE_SHORTS_UPLOADED_FOLDER_ID: ${{ secrets.WILDLIFE_DRIVE_SHORTS_UPLOADED_FOLDER_ID }}
+          WILDLIFE_DRIVE_LONG_TOUPLOAD_FOLDER_ID: ${{ secrets.WILDLIFE_DRIVE_LONG_TOUPLOAD_FOLDER_ID }}
+          WILDLIFE_DRIVE_LONG_UPLOADED_FOLDER_ID: ${{ secrets.WILDLIFE_DRIVE_LONG_UPLOADED_FOLDER_ID }}
+        run: |
+          if [ "$RUN_MODE" = "preflight" ]; then
+            python scripts/seo_automation.py --preflight --channel "$SELECTED_CHANNEL"
+          else
+            python scripts/seo_automation.py --channel "$SELECTED_CHANNEL"
+          fi
 
       - name: Tracking sheets aur keyword data ko repo mein save karo
+        if: ${{ always() && (github.event_name == 'schedule' || inputs.run_mode == 'execute') }}
         run: |
           git config user.name "seo-automation-bot"
           git config user.email "actions@github.com"
           git add tracking_sheet_*.xlsx winning_keywords_*.json processed_upload_hashes.json || true
           git diff --cached --quiet || git commit -m "Data update: $(date -u +'%Y-%m-%d %H:%M UTC')"
-          git push || true
+          git push
