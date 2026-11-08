@@ -14,12 +14,45 @@ karta hai.
 - `scripts/get_refresh_token.py` — apne PC pe ek dafa chalane wali OAuth script
 - `scripts/requirements.txt` — Python dependencies
 
-## Naya channel add karna
-1. `channels_config.json` mein naya object add karein, `secret_prefix` jaise `"CH2_"` rakhein
-2. GitHub Secrets mein CH2_ prefix wale secrets banayein (YOUTUBE_API_KEY, CHANNEL_ID, OAUTH_*, DRIVE_* folder IDs)
-3. `.github/workflows/seo-automation.yml` mein CH2 wala commented block uncomment karein
+## Channels & Secret Prefixes
 
-Setup ke baaki steps PDF guide follow karein.
+Repo multiple channels support karta hai via `channels_config.json` aur GitHub Secrets:
+
+1. **Medieval Channel (`medieval_lives_explained`)**
+   - Prefix: `MEDIEVAL_`
+   - Upload Days: Shorts (1,3,5 - Tue, Thu, Sat), Long (0 - Mon)
+2. **Born to Wild (`born_to_wild`)**
+   - Prefix: `WILDLIFE_`
+   - Handle: `@borntowild-u9b`
+   - Upload Days: Shorts (1,3,5 - Tue, Thu, Sat), Long (6 - Sun)
+   - Initial state: `"enabled": false` (Preflight verify hone tak safe disabled)
+
+### Har Channel ke 9 Required Secrets:
+- `{PREFIX}YOUTUBE_API_KEY`
+- `{PREFIX}YOUTUBE_CHANNEL_ID`
+- `{PREFIX}YOUTUBE_OAUTH_CLIENT_ID`
+- `{PREFIX}YOUTUBE_OAUTH_CLIENT_SECRET`
+- `{PREFIX}YOUTUBE_OAUTH_REFRESH_TOKEN`
+- `{PREFIX}DRIVE_SHORTS_TOUPLOAD_FOLDER_ID`
+- `{PREFIX}DRIVE_SHORTS_UPLOADED_FOLDER_ID`
+- `{PREFIX}DRIVE_LONG_TOUPLOAD_FOLDER_ID`
+- `{PREFIX}DRIVE_LONG_UPLOADED_FOLDER_ID`
+
+Optional (agar Drive kisi aur Google account par ho):
+- `{PREFIX}DRIVE_OAUTH_CLIENT_ID`
+- `{PREFIX}DRIVE_OAUTH_CLIENT_SECRET`
+- `{PREFIX}DRIVE_OAUTH_REFRESH_TOKEN`
+
+Shared Secret:
+- `GROQ_API_KEY` (AI SEO generation ke liye zaroori)
+
+## Preflight Verification (Read-Only)
+
+GitHub Actions workflow dispatch se `run_mode: preflight` aur specific channel (ya `all`) select karke verify karein:
+- Ye step 9 secrets existence check karta hai
+- OAuth channel identity aur handle match verify karta hai
+- Chaaro Drive folders ki accessibility aur permissions confirm karta hai
+- Queue mein kitni videos hain count karta hai (bina download ya upload kiye)
 
 ## Shorts folder rule
 

@@ -832,12 +832,24 @@ def process_channel(ctx):
 
     force_upload_type = os.environ.get("FORCE_UPLOAD_TYPE", "none")
     force_long = (
-        force_upload_type == "medieval_long"
-        and ctx["name"] == "medieval_lives_explained"
+        (
+            force_upload_type == "medieval_long"
+            and ctx["name"] == "medieval_lives_explained"
+        )
+        or (
+            force_upload_type == "born_to_wild_long"
+            and ctx["name"] == "born_to_wild"
+        )
     )
     force_short = (
-        force_upload_type == "medieval_short"
-        and ctx["name"] == "medieval_lives_explained"
+        (
+            force_upload_type == "medieval_short"
+            and ctx["name"] == "medieval_lives_explained"
+        )
+        or (
+            force_upload_type == "born_to_wild_short"
+            and ctx["name"] == "born_to_wild"
+        )
     )
 
     if (
@@ -1346,13 +1358,17 @@ def main():
             print(f"[{ctx['name']}] Disabled pending credential verification; use --preflight to check.")
             continue
 
-        # A manual Medieval upload must never process another channel's queue.
-        if (
-            force_upload_type in {"medieval_long", "medieval_short"}
-            and ctx["name"] != "medieval_lives_explained"
-        ):
+        # A manual single-channel upload must never process another channel's queue.
+        forced_channel_map = {
+            "medieval_long": "medieval_lives_explained",
+            "medieval_short": "medieval_lives_explained",
+            "born_to_wild_long": "born_to_wild",
+            "born_to_wild_short": "born_to_wild",
+        }
+        target_channel = forced_channel_map.get(force_upload_type)
+        if target_channel and ctx["name"] != target_channel:
             print(
-                f"[{ctx['name']}] Manual Medieval run mein channel skip."
+                f"[{ctx['name']}] Manual {force_upload_type} run mein channel skip."
             )
             continue
 

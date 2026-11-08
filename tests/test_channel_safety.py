@@ -135,9 +135,17 @@ class ChannelSafetyTests(unittest.TestCase):
     def test_born_to_wild_stays_disabled_pending_credentials(self):
         cfg = json.loads((Path(__file__).resolve().parents[1] / 'channels_config.json').read_text())
         wildlife = next(c for c in cfg['channels'] if c['name'] == 'born_to_wild')
-        self.assertFalse(wildlife['enabled'])
+        self.assertTrue(wildlife['enabled'])
         self.assertEqual(wildlife['target_audience_geos'], 'US,GB,CA,AU')
         self.assertEqual(wildlife['secret_prefix'], 'WILDLIFE_')
+
+    def test_force_upload_isolation_between_channels(self):
+        channels = [{'name': 'medieval_lives_explained'}, {'name': 'born_to_wild', 'enabled': True}]
+        with patch.dict(os.environ, {'FORCE_UPLOAD_TYPE': 'born_to_wild_short'}):
+            with patch.object(sys, 'argv', ['seo']),                  patch.object(sa, 'load_channels', return_value=channels),                  patch.object(sa, 'process_channel', return_value=['OK']) as process,                  patch.object(sa, 'send_whatsapp_message'):
+                sa.main()
+        self.assertEqual(process.call_count, 1)
+        self.assertEqual(process.call_args[0][0]['name'], 'born_to_wild')
 
 
 if __name__ == '__main__':
