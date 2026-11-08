@@ -32,6 +32,8 @@ on:
           - none
           - medieval_long
           - medieval_short
+          - born_to_wild_long
+          - born_to_wild_short
 
 concurrency:
   group: youtube-seo-automation
