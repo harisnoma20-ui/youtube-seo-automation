@@ -39,7 +39,7 @@
     {
       "name": "born_to_wild",
       "secret_prefix": "WILDLIFE_",
-      "enabled": false,
+      "enabled": true,
       "channel_handle": "@borntowild-u9b",
       "niche_keywords": "cinematic wildlife documentaries, animal life journeys, wildlife survival, animal behavior, nature stories",
       "target_audience_geos": "US,GB,CA,AU",
